@@ -50,6 +50,11 @@ $ bash psnr-mrd.sh
 $ bash psnr-mrd-2.sh
 ```
 
+### Step 4.1: Compress and decompress the \textbf{Magnetic Reconnection} dataset using our STZ, SPERR, SZ3, ZFP, and MGARD in \textbf{serial} and \textbf{OpenMP} modes, and evaluate the speed (3 minutes).
+```
+$ bash psnr-nyx.sh
+$ bash psnr-nyx-2.sh
+```
 
 ### Baseline compressors: [SZ3](https://github.com/szcompressor/SZ3.git); [ZFP](https://github.com/LLNL/zfp); [SPERR](https://github.com/NCAR/SPERR); [MGARDX](https://github.com/CODARcode/MGARD/tree/master).
 
