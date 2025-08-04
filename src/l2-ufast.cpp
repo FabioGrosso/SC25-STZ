@@ -26,14 +26,11 @@ void merge_sub_blocks_to_full(float* sub_blocks[8], float* full_data, int sub_di
     for (int z = 0; z < full_z; ++z) {
         for (int y = 0; y < full_y; ++y) {
             for (int x = 0; x < full_x; ++x) {
-                // 计算该点属于哪个子块
                 int sub_index = ((z & 1) << 2) | ((y & 1) << 1) | (x & 1);
-                // 计算在子块内的位置
                 int sub_z = z / 2;
                 int sub_y = y / 2;
                 int sub_x = x / 2;
                 int pos = sub_z * (sub_dim_y * sub_dim_x) + sub_y * sub_dim_x + sub_x;
-                // 将子块数据写入完整数据的对应位置
                 full_data[z * (full_y * full_x) + y * full_x + x] = sub_blocks[sub_index][pos];
             }
         }
