@@ -1,5 +1,5 @@
 # SC25-STZ
-Artifacts of SC'25 submission "STZ: A High Quality and High Speed Streaming Lossy Compression Framework for Scientific Data". While preparing the artifacts, we executed them on a single node from the Chameleon Cloud, equipped with two Intel Xeon Gold 6242 CPUs and 192 GB of memory (specifically, compute_icelake_r650 configuration).
+Artifacts of SC'25 "STZ: A High Quality and High Speed Streaming Lossy Compression Framework for Scientific Data". While preparing the artifacts, we executed them on a single node from the Chameleon Cloud, equipped with two Intel Xeon Gold 6242 CPUs and 192 GB of memory (specifically, compute_icelake_r650 configuration).
 
 ## Minimum system & software libraries requirements
 OS: Linux (Ubuntu 20.04 is recommended)
