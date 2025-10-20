@@ -1,7 +1,15 @@
 # SC25-STZ
 Artifacts of SC'25 "STZ: A High Quality and High Speed Streaming Lossy Compression Framework for Scientific Data". While preparing the artifacts, we executed them on a single node from the Chameleon Cloud, equipped with two Intel Xeon Gold 6242 CPUs and 192 GB of memory (compute_icelake_r650 configuration).
 
-## Minimum system & software libraries requirements
+## Option1 build form source
+### Step 1: Install modifyied sz3 at [https://github.com/FabioGrosso/SZ3-ncp/](https://singularity-tutorial.github.io/01-installation/)
+### Step 2: Modifyied the data size and place at line 11 and 558
+### Step 3: Build
+g++ -fopenmp float.cpp -o float -I ~/SZ3-ncp/install/include/ -I ~/SZ3-ncp/install/include/SZ3/api -L ~/SZ3-ncp/install/lib64/ -lzstd -O3
+### Step 4: Run
+./float 0.5
+
+## Option2 using ontianner Minimum system & software libraries requirements
 OS: Linux (Ubuntu 20.04 is recommended)
 
 Memory: >= 192 GB RAM
