@@ -3,8 +3,6 @@ Artifacts of SC'25 "STZ: A High Quality and High Speed Streaming Lossy Compressi
 
 ## Option 1: Build from Source
 ### Step 1: Install the modified SZ3 from https://github.com/FabioGrosso/SZ3-ncp/
- (installation instructions available at https://singularity-tutorial.github.io/01-installation/
-).
 ### Step 2: Adjust the data size and file paths at lines 11 and 558 in the source files (float.cpp and double.cpp).
 ### Step 3: Build using the following command:
 ```
