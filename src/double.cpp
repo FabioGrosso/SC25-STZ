@@ -17,6 +17,15 @@ const int dim_x = 128;
 const int low_dim_z = 512;
 const int low_dim_y = 64;
 const int low_dim_x = 64;
+// const int full_dim_z = 1024;
+// const int full_dim_y = 1024;
+// const int full_dim_x = 1024;
+// const int dim_z = 512;
+// const int dim_y = 512;
+// const int dim_x = 512;
+// const int low_dim_z = 256;
+// const int low_dim_y = 256;
+// const int low_dim_x = 256;
 void merge_sub_blocks_to_full(double* sub_blocks[8], double* full_data, int sub_dim_x, int sub_dim_y, int sub_dim_z) {
     int full_x = sub_dim_x * 2;
     int full_y = sub_dim_y * 2;
@@ -76,6 +85,7 @@ void preprocess_block(int block, const double* sub_block, const double* ref, dou
                         int dim_x, int dim_y, int dim_z)
 {
     int dim_xy= dim_x * dim_y;
+    #pragma omp parallel for 
     for (int z = 0; z < dim_z; ++z)
     {
         for (int y = 0; y < dim_y; ++y)
@@ -538,10 +548,16 @@ bool writeBinaryData(const std::string& filepath, const double* data, size_t dat
 //---------------------------------------------------------------------
 // Main routine
 //---------------------------------------------------------------------
-int main()
+int main(int argc, char* argv[])
 {
+    if (argc < 2) {
+        std::cerr << "Usage: " << argv[0] << " <error_bound>" << std::endl;
+        return 1;
+    }
+
     std::string full_file_path = "/N/u/daocwang/BigRed200/data/wpx-1000-512.raw";
     // std::string full_file_path = "/N/u/daocwang/BigRed200/data/magnetic_reconnection_512x512x512_double32.raw";
+    // std::string full_file_path = "/N/u/daocwang/BigRed200/data/miranda_1024x1024x1024_double32.raw";
     size_t full_size = full_dim_z * full_dim_y * full_dim_x;
     double* full_data = new double[full_size];
     if (!readBinaryData(full_file_path, full_data, full_size))
@@ -569,34 +585,31 @@ int main()
 
     auto split_end = std::chrono::high_resolution_clock::now();
     double sz_time_taken_split = std::chrono::duration_cast<std::chrono::nanoseconds>(split_end - split_start).count() * 1e-9;
-    std::cout << "Time taken by split is: " << std::fixed << std::setprecision(5)
-            << sz_time_taken_split << " sec" << std::endl;
+    // std::cout << "Time taken by split is: " << std::fixed << std::setprecision(5)
+    //         << sz_time_taken_split << " sec" << std::endl;
 
     // Use sub_block_data[0] as the reference (sz_out_data)
     // and sub_block_data[1] ... sub_block_data[7] as the seven data blocks.
-    double eb;
-    std::ifstream eb_file("eb.txt");
-    if (!eb_file)
-    {
-        std::cerr << "Error: Unable to open eb.txt" << std::endl;
-        exit(1);
-    }
-    eb_file >> eb;
-
+    double eb = atof(argv[1]);
+    
+    size_t allSize = 0;
     size_t szcompressedSize;
     auto sz_start = std::chrono::high_resolution_clock::now();
     char* tmp = SZ_compress4De(low_block_data[0], low_dim_x, low_dim_y, low_dim_z, eb, szcompressedSize);
+    // std::cout << "outSize: " << szcompressedSize << std::endl;
+    allSize += szcompressedSize;
     auto sz_end = std::chrono::high_resolution_clock::now();
     double sz_time_taken = std::chrono::duration_cast<std::chrono::nanoseconds>(sz_end - sz_start).count() * 1e-9;
-    std::cout << "Time taken by sz compression is: " << std::fixed << std::setprecision(5)
-              << sz_time_taken << " sec" << std::endl;
+    // std::cout << "Time taken by sz compression is: " << std::fixed << std::setprecision(5)
+    //           << sz_time_taken << " sec" << std::endl;
 
     auto sz_destart = std::chrono::high_resolution_clock::now();
     double* decompressed_data = SZ_decompress4De(tmp, szcompressedSize, low_dim_x, low_dim_y, low_dim_z);
     auto sz_deend = std::chrono::high_resolution_clock::now();
     double sz_time_taken_decompress = std::chrono::duration_cast<std::chrono::nanoseconds>(sz_deend - sz_destart).count() * 1e-9;
-    std::cout << "Time taken by sz decompression is: " << std::fixed << std::setprecision(5)
-            << sz_time_taken_decompress << " sec" << std::endl;
+    // std::cout << "Time taken by sz decompression is: " << std::fixed << std::setprecision(5)
+    //         << sz_time_taken_decompress << " sec" << std::endl;
+    // writeBinaryData("tur-low-2.raw", decompressed_data, full_dim_z/4 * full_dim_y/4 * full_dim_x/4);
 
     char* low_comp[7];
     double* low_diff_data[7];
@@ -619,11 +632,13 @@ int main()
         preprocess_block(block, low_block_data[block+1], low_block_data[0], low_diff_data[block],
                            low_dim_x, low_dim_y, low_dim_z);
         low_comp[block] = SZ_compress(low_diff_data[block], low_dim_x, low_dim_y, low_dim_z, 2.5 * eb, low_compressedSize[block]);
+        allSize += low_compressedSize[block];
+        // std::cout << "outSize: " << low_compressedSize[block] << std::endl;
     }
     auto low_end = std::chrono::high_resolution_clock::now();
     double low_time_taken = std::chrono::duration_cast<std::chrono::nanoseconds>(low_end - low_start).count() * 1e-9;
-    std::cout << "Time taken by low compression is: " << std::fixed << std::setprecision(5)
-              << low_time_taken << " sec" << std::endl;
+    // std::cout << "Time taken by low compression is: " << std::fixed << std::setprecision(5)
+    //           << low_time_taken << " sec" << std::endl;
 
     auto low_decompress_start = std::chrono::high_resolution_clock::now();
     #pragma omp parallel for 
@@ -633,19 +648,19 @@ int main()
     }
     auto low_decompress_end_sz = std::chrono::high_resolution_clock::now();
     double low_time_taken_decompress_sz = std::chrono::duration_cast<std::chrono::nanoseconds>(low_decompress_end_sz - low_decompress_start).count() * 1e-9;
-    std::cout << "Time taken by low_decompression_sz is: " << std::fixed << std::setprecision(5)
-              << low_time_taken_decompress_sz << " sec" << std::endl;
+    // std::cout << "Time taken by low_decompression_sz is: " << std::fixed << std::setprecision(5)
+    //           << low_time_taken_decompress_sz << " sec" << std::endl;
     #pragma omp parallel for 
     for (int block = 0; block < 7; ++block)
     {
-        std::cout << "De-preprocessing block " << block + 1 << std::endl;
+        // std::cout << "De-preprocessing block " << block + 1 << std::endl;
         depreprocess_block(block, low_deData[block], low_block_data[0], low_de_sub_block[block],
                            low_dim_x, low_dim_y, low_dim_z);
     }
     auto low_decompress_end = std::chrono::high_resolution_clock::now();
     double low_time_taken_decompress = std::chrono::duration_cast<std::chrono::nanoseconds>(low_decompress_end - low_decompress_start).count() * 1e-9;
-    std::cout << "Time taken by low_decompression is: " << std::fixed << std::setprecision(5)
-              << low_time_taken_decompress << " sec" << std::endl;
+    // std::cout << "Time taken by low_decompression is: " << std::fixed << std::setprecision(5)
+    //           << low_time_taken_decompress << " sec" << std::endl;
     
     auto reconstructed_low_start = std::chrono::high_resolution_clock::now();
     double* reconstructed_sub_0 = new double[dim_z * dim_x * dim_y];
@@ -660,10 +675,11 @@ int main()
         low_de_sub_block[6]       // sub_block_7
     };
     merge_sub_blocks_to_full(all_low_blocks, reconstructed_sub_0, low_dim_x, low_dim_y, low_dim_z);
+    // writeBinaryData("tur-mid-2.raw", reconstructed_sub_0, full_dim_z/2 * full_dim_y/2 * full_dim_x/2);
     auto reconstructed_low_end = std::chrono::high_resolution_clock::now();
     double time_taken_reconstructed_low = std::chrono::duration_cast<std::chrono::nanoseconds>(reconstructed_low_end - reconstructed_low_start).count() * 1e-9;
-    std::cout << "Time taken by reconstructed_low is: " << std::fixed << std::setprecision(5)
-              << time_taken_reconstructed_low << " sec" << std::endl;
+    // std::cout << "Time taken by reconstructed_low is: " << std::fixed << std::setprecision(5)
+    //           << time_taken_reconstructed_low << " sec" << std::endl;
     
 
     // Allocate buffers for diff, decompressed, and reconstructed data for 7 blocks.
@@ -688,12 +704,16 @@ int main()
         preprocess_block(block, sub_block_data[block+1], reconstructed_sub_0, diff_data[block],
                            dim_x, dim_y, dim_z);
         comp[block] = SZ_compress(diff_data[block], dim_x, dim_y, dim_z, 6.25 * eb, compressedSize[block]);
+        allSize += compressedSize[block];
+        // std::cout << "outSize: " << compressedSize[block] << std::endl;
     }
+    std::cout << "allSize: " << allSize << std::endl;
+    std::cout << "CR: " << full_dim_z*full_dim_y*full_dim_x*8/allSize << std::endl;
 
     auto end = std::chrono::high_resolution_clock::now();
     double time_taken = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count() * 1e-9;
-    std::cout << "Time taken by compression is: " << std::fixed << std::setprecision(5)
-              << time_taken << " sec" << std::endl;
+    // std::cout << "Time taken by compression is: " << std::fixed << std::setprecision(5)
+    //           << time_taken << " sec" << std::endl;
 
     auto decompress_start = std::chrono::high_resolution_clock::now();
     #pragma omp parallel for 
@@ -701,17 +721,21 @@ int main()
     {
         deData[block] = SZ_decompress_separated(comp[block], compressedSize[block], dim_x, dim_y, dim_z);
     }
+    auto decompress_end_sz = std::chrono::high_resolution_clock::now();
+    double time_taken_decompress_sz = std::chrono::duration_cast<std::chrono::nanoseconds>(decompress_end_sz - decompress_start).count() * 1e-9;
+    // std::cout << "Time taken by decompression_sz is: " << std::fixed << std::setprecision(5)
+    //           << time_taken_decompress_sz << " sec" << std::endl;
     #pragma omp parallel for 
     for (int block = 0; block < 7; ++block)
     {
-        std::cout << "De-preprocessing block " << block + 1 << std::endl;
+        // std::cout << "De-preprocessing block " << block + 1 << std::endl;
         depreprocess_block(block, deData[block], reconstructed_sub_0, de_sub_block[block],
                            dim_x, dim_y, dim_z);
     }
     auto decompress_end = std::chrono::high_resolution_clock::now();
     double time_taken_decompress = std::chrono::duration_cast<std::chrono::nanoseconds>(decompress_end - decompress_start).count() * 1e-9;
-    std::cout << "Time taken by decompression is: " << std::fixed << std::setprecision(5)
-              << time_taken_decompress << " sec" << std::endl;
+    // std::cout << "Time taken by decompression is: " << std::fixed << std::setprecision(5)
+    //           << time_taken_decompress << " sec" << std::endl;
 
     auto reconstructed_full_start = std::chrono::high_resolution_clock::now();
     double* reconstructed_full_data = new double[full_dim_z * full_dim_y * full_dim_x];
@@ -728,11 +752,10 @@ int main()
     merge_sub_blocks_to_full(all_sub_blocks, reconstructed_full_data, dim_x, dim_y, dim_z);
     auto reconstructed_full_end = std::chrono::high_resolution_clock::now();
     double time_taken_reconstructed_full = std::chrono::duration_cast<std::chrono::nanoseconds>(reconstructed_full_end - reconstructed_full_start).count() * 1e-9;
-    std::cout << "Time taken by reconstructed_full is: " << std::fixed << std::setprecision(5)
-              << time_taken_reconstructed_full << " sec" << std::endl;
+    // std::cout << "Time taken by reconstructed_full is: " << std::fixed << std::setprecision(5)
+    //           << time_taken_reconstructed_full << " sec" << std::endl;
 
-    // 写入合并后的完整数据文件
-    writeBinaryData("ours.raw", reconstructed_full_data, full_dim_z * full_dim_y * full_dim_x);
+    // writeBinaryData("ours.raw", reconstructed_full_data, full_dim_z * full_dim_y * full_dim_x);
 
     double mse_full = 0.0;
     for (size_t i = 0; i < full_dim_z * full_dim_y * full_dim_x; ++i) {
@@ -762,10 +785,10 @@ int main()
 
     // writeBinaryData("/N/u/daocwang/BigRed200/stream/sz.out_0", reconstructed_sub_0, dim_z * dim_xy);
 
-    std::cout << "All comp is: " << std::fixed << std::setprecision(5)
+    std::cout << "compress time is: " << std::fixed << std::setprecision(5)
               << sz_time_taken_split + low_time_taken + low_time_taken_decompress - low_time_taken_decompress_sz + time_taken_reconstructed_low + time_taken << " sec" << std::endl;
     
-    std::cout << "All decomp is: " << std::fixed << std::setprecision(5)
+    std::cout << "decompress time is: " << std::fixed << std::setprecision(5)
               << sz_time_taken_decompress + low_time_taken_decompress + time_taken_reconstructed_low + time_taken_decompress + time_taken_reconstructed_full << " sec" << std::endl;
 
     // (Free allocated memory as needed.)
