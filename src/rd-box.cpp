@@ -761,8 +761,12 @@ bool writeBinaryData(const std::string& filepath, const float* data, size_t data
 //---------------------------------------------------------------------
 // Main routine
 //---------------------------------------------------------------------
-int main()
+int main(int argc, char* argv[])
 {
+    if (argc < 2) {
+        std::cerr << "Usage: " << argv[0] << " <error_bound>" << std::endl;
+        return 1;
+    }
     // std::string full_file_path = "/home/data/baryon_density.f32";
     //std::string full_file_path = "/home/data/magnetic_reconnection_512x512x512_float32.raw";
     std::string full_file_path = "/N/u/daocwang/BigRed200/data/miranda_1024x1024x1024_float32.raw";
@@ -798,14 +802,7 @@ int main()
 
     // Use sub_block_data[0] as the reference (sz_out_data)
     // and sub_block_data[1] ... sub_block_data[7] as the seven data blocks.
-    double eb;
-    std::ifstream eb_file("eb.txt");
-    if (!eb_file)
-    {
-        std::cerr << "Error: Unable to open eb.txt" << std::endl;
-        exit(1);
-    }
-    eb_file >> eb;
+    double eb = atof(argv[1]);
 
     size_t szcompressedSize;
     auto sz_start = std::chrono::high_resolution_clock::now();
