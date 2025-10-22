@@ -26,6 +26,9 @@ const int dim_x = 512;
 const int low_dim_z = 256;
 const int low_dim_y = 256;
 const int low_dim_x = 256;
+const int xRand = 8;
+const int yRand = 8;
+const int zRand = 8;
 void merge_sub_blocks_to_full(float* sub_blocks[8], float* full_data, int sub_dim_x, int sub_dim_y, int sub_dim_z) {
     int full_x = sub_dim_x * 2;
     int full_y = sub_dim_y * 2;
@@ -35,14 +38,11 @@ void merge_sub_blocks_to_full(float* sub_blocks[8], float* full_data, int sub_di
     for (int z = 0; z < full_z; ++z) {
         for (int y = 0; y < full_y; ++y) {
             for (int x = 0; x < full_x; ++x) {
-                // 计算该点属于哪个子块
                 int sub_index = ((z & 1) << 2) | ((y & 1) << 1) | (x & 1);
-                // 计算在子块内的位置
                 int sub_z = z / 2;
                 int sub_y = y / 2;
                 int sub_x = x / 2;
                 int pos = sub_z * (sub_dim_y * sub_dim_x) + sub_y * sub_dim_x + sub_x;
-                // 将子块数据写入完整数据的对应位置
                 full_data[z * (full_y * full_x) + y * full_x + x] = sub_blocks[sub_index][pos];
             }
         }
@@ -55,17 +55,14 @@ void merge_sub_blocks_to_full_qoi(float* sub_blocks[8], float* full_data, int su
     int full_z = sub_dim_z * 2;
 
     // #pragma omp parallel for 
-    for (int z = 0; z < full_z/20; ++z) {
-        for (int y = 0; y < full_y/20; ++y) {
-            for (int x = 0; x < full_x/20; ++x) {
-                // 计算该点属于哪个子块
+    for (int z = 0; z < full_z/(zRand*2); ++z) {
+        for (int y = 0; y < full_y/(yRand*2); ++y) {
+            for (int x = 0; x < full_x/(xRand*2); ++x) {
                 int sub_index = ((z & 1) << 2) | ((y & 1) << 1) | (x & 1);
-                // 计算在子块内的位置
                 int sub_z = z / 2;
                 int sub_y = y / 2;
                 int sub_x = x / 2;
                 int pos = sub_z * (sub_dim_y * sub_dim_x) + sub_y * sub_dim_x + sub_x;
-                // 将子块数据写入完整数据的对应位置
                 full_data[z * (full_y * full_x) + y * full_x + x] = sub_blocks[sub_index][pos];
             }
         }
@@ -495,11 +492,11 @@ void depreprocess_block_qoi(int block, const float* deData, const float* ref, fl
                           int dim_x, int dim_y, int dim_z)
 {
     int dim_xy= dim_x * dim_y;
-    for (int z = 0; z < dim_z/10; ++z)
+    for (int z = 0; z < dim_z/zRand; ++z)
     {
-        for (int y = 0; y < dim_y/10; ++y)
+        for (int y = 0; y < dim_y/yRand; ++y)
         {
-            for (int x = 0; x < dim_x/10; ++x)
+            for (int x = 0; x < dim_x/xRand; ++x)
             {
                 int idx = z * dim_xy + y * dim_x + x;
                 switch(block)
@@ -768,7 +765,7 @@ int main()
 {
     // std::string full_file_path = "/home/data/baryon_density.f32";
     //std::string full_file_path = "/home/data/magnetic_reconnection_512x512x512_float32.raw";
-    std::string full_file_path = "/home/data/miranda_1024x1024x1024_float32.raw";
+    std::string full_file_path = "/N/u/daocwang/BigRed200/data/miranda_1024x1024x1024_float32.raw";
     size_t full_size = full_dim_z * full_dim_y * full_dim_x;
     float* full_data = new float[full_size];
     if (!readBinaryData(full_file_path, full_data, full_size))
